@@ -1,43 +1,47 @@
-import { defineStackbitConfig } from '@stackbit/types'
-import { storyblokInit, apiPlugin } from '@storyblok/js'
+import { ContentfulContentSource } from '@stackbit/cms-contentful'
 
-// Initialize Storyblok client (this should be in a separate file)
-const { storyblokApi } = storyblokInit({
-  accessToken: 'AdpuhnmPC4YradQPkzv9iwtt',
-  use: [apiPlugin]
-})
+import { defineStackbitConfig, type SiteMapEntry } from '@stackbit/types'
 
 export default defineStackbitConfig({
   stackbitVersion: '~0.6.0',
-  ssgName: 'astro',
   nodeVersion: '18',
-  cmsName: 'storyblok', // Specify Storyblok as CMS
-
-  // Content source configuration
+  ssgName: 'astro',
   contentSources: [
-    {
-      storyblokApi
-    }
-  ],
-
-  // Model definitions
-  models: {
-    page: {
-      type: 'page',
-      label: 'Page',
-      fields: [{ name: 'title', type: 'string', label: 'Title' }]
-    }
-  },
-
-  // Site map configuration
-  siteMap: ({ documents }) => {
-    return documents.map(document => {
-      return {
-        stableId: document.id,
-        urlPath: document.fields?.slug ? `/${document.fields.slug}` : `/${document.id}`,
-        document,
-        isHomePage: document.modelName === 'page' && document.fields?.slug === 'home'
-      }
+    new ContentfulContentSource({
+      spaceId: process.env.CONTENTFUL_SPACE_ID!,
+      environment: process.env.CONTENTFUL_ENVIRONMENT || 'master',
+      previewToken: process.env.CONTENTFUL_PREVIEW_TOKEN!,
+      accessToken: process.env.CONTENTFUL_MANAGEMENT_TOKEN!
     })
+  ],
+  modelExtensions: [
+    { name: 'bookReferencePage', type: 'page' },
+    { name: 'bookAuthor', type: 'page' }
+  ],
+  siteMap: ({ documents, models }) => {
+    const pageModels = models.filter(m => m.type === 'page')
+
+    return documents
+      .filter(d => pageModels.some(m => m.name === d.modelName))
+      .map(document => {
+        const urlModel = (() => {
+          switch (document.modelName) {
+            case 'bookReferencePage':
+              return 'books'
+            case 'bookAuthor':
+              return 'author'
+            default:
+              return null
+          }
+        })()
+
+        return {
+          stableId: document.id,
+          urlPath: `/${urlModel}/${document.id}`,
+          document,
+          isHomePage: false
+        }
+      })
+      .filter(Boolean) as SiteMapEntry[]
   }
 })
