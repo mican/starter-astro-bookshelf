@@ -1,11 +1,24 @@
 ---
-import { client } from "../../lib/contentful";
+import { client } from "../../lib/contentful.jsx";
 import Layout from "../../layouts/Layout.astro";
 import { documentToHtmlString } from "@contentful/rich-text-html-renderer";
 import Header from "../../components/Header.astro";
 
-const { slug } = Astro.params;
-let author;
+export async function getStaticPaths() {
+  const authors = await client.getAllAuthors();
+  const paths = authors.map((author) => ({
+    params: { slug: author.id },
+    props: { author },
+  }));
+
+  return paths
+}
+
+
+// const { slug } = Astro.params;
+const { author } = Astro.props;
+
+
 
 try {
   author = await client.getAuthor(slug);
@@ -16,8 +29,8 @@ try {
 
 <Layout title={author.name}>
   <Header />
-  <section class="px-2 sm:px-12 mb-8" transition:animate="slide">
-    <h1 class="text-6xl">
+  <section class="px-2 sm:px-12 mb-8" transition:animate="slide" data-sb-object-id={author.id}>
+    <h1 class="text-6xl" data-sb-field-path="name">
       {author.name}
     </h1>
     <div

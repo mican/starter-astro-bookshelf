@@ -1,17 +1,29 @@
 ---
-import { client } from "../../lib/contentful";
+import { client } from "../../lib/contentful.jsx";
 import Layout from "../../layouts/Layout.astro";
 import { documentToHtmlString } from "@contentful/rich-text-html-renderer";
 import Header from "../../components/Header.astro";
 
-const { slug } = Astro.params;
-let book;
 
-try {
-  book = await client.getSingleBook(slug);
-} catch (error) {
-  return Astro.redirect("/404");
+export async function getStaticPaths() {
+  const books = await client.getAllBooks();
+  const paths = books.map((book) => ({
+    params: { slug: book.id },
+    props: { book },
+  }));
+
+  return paths;
 }
+
+// const { slug } = Astro.params;
+const { book } = Astro.props;
+// let book;
+
+// try {
+//   book = await client.getSingleBook(slug);
+// } catch (error) {
+//   return Astro.redirect("/404");
+// }
 ---
 
 <Layout title={book.title}>
